@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { LeaderboardTab } from "./leaderboard-tab";
 import { StatsTab } from "./stats-tab";
+import { TeamManager } from "./team-manager";
 
 interface Profile { display_name: string; avatar_url: string | null; }
 interface Team { id: string; name: string; created_at: string; }
@@ -310,15 +311,18 @@ export function EventDetailClient({ event, userId, isParticipant, catches: initi
               </div>
             </div>
 
-            {/* Master actions */}
-            {isMaster && (
+            {/* Team management — master only, teams mode */}
+            {isMaster && event.mode === "teams" && (
               <>
                 <Separator />
                 <div className="space-y-2">
-                  <p className="text-sm font-semibold text-muted-foreground uppercase tracking-widest">Správa závodu</p>
-                  <Button asChild variant="outline" className="w-full">
-                    <Link href={`/events/${event.id}/edit`}>Upravit závod</Link>
-                  </Button>
+                  <p className="text-sm font-semibold text-muted-foreground uppercase tracking-widest">Správa týmů</p>
+                  <TeamManager
+                    eventId={event.id}
+                    teams={teams}
+                    participants={participants}
+                    masterUserId={event.master_user_id}
+                  />
                 </div>
               </>
             )}

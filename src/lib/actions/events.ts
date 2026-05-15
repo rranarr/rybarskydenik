@@ -93,15 +93,63 @@ export async function joinEventByCode(code: string) {
     return { eventId: event.id, mode: event.mode, alreadyJoined: true };
   }
 
-  if (event.mode === "individual") {
-    await supabase.from("event_participants").insert({
-      event_id: event.id,
-      user_id: user.id,
-    });
-    revalidatePath("/dashboard");
-  }
+  await supabase.from("event_participants").insert({
+    event_id: event.id,
+    user_id: user.id,
+  });
+  revalidatePath("/dashboard");
 
   return { eventId: event.id, mode: event.mode };
+}
+
+export async function assignParticipantTeam(eventId: string, participantUserId: string, teamId: string | null) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) redirect("/auth");
+
+  const { data: event } = await supabase
+    .from("events")
+    .select("master_user_id")
+    .eq("id", eventId)
+    .single();
+
+  if (!event || event.master_user_id !== user.id) {
+    return { error: "Nemáš oprávnění přiřazovat účastníky." };
+  }
+
+  const { error } = await supabase
+    .from("event_participants")
+    .update({ team_id: teamId })
+    .eq("event_id", eventId)
+    .eq("user_id", participantUserId);
+
+  if (error) return { error: error.message };
+  revalidatePath(`/events/${eventId}`);
+  return { success: true };
+}
+
+export async function createTeam(eventId: string, name: string) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) redirect("/auth");
+
+  const { data: event } = await supabase
+    .from("events")
+    .select("master_user_id")
+    .eq("id", eventId)
+    .single();
+
+  if (!event || event.master_user_id !== user.id) {
+    return { error: "Nemáš oprávnění vytvářet týmy." };
+  }
+
+  const { error } = await supabase
+    .from("teams")
+    .insert({ event_id: eventId, name });
+
+  if (error) return { error: error.message };
+  revalidatePath(`/events/${eventId}`);
+  return { success: true };
 }
 
 export async function joinTeam(eventId: string, teamId: string | null, newTeamName?: string) {

@@ -120,12 +120,13 @@ export function LeaderboardTab({ catches, participants, teams, mode }: Props) {
         </div>
       )}
 
-      {/* Individual leaderboard */}
+      {/* Individual leaderboard — in teams mode only show unassigned */}
+      {(mode !== "teams" || players.some((p) => !p.team_id)) && (
       <div className="space-y-2">
         {mode === "teams" && (
-          <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-widest">Jednotlivci</h3>
+          <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-widest">Bez týmu</h3>
         )}
-        {players.map((p, i) => (
+        {(mode === "teams" ? players.filter((p) => !p.team_id) : players).map((p, i) => (
           <div key={p.user_id} className="rounded-xl border border-border bg-card px-4 py-3">
             <div className="flex items-center gap-3">
               <span className="text-xl w-8 text-center">{rankEmoji[i] ?? `${i + 1}.`}</span>
@@ -150,6 +151,7 @@ export function LeaderboardTab({ catches, participants, teams, mode }: Props) {
           </div>
         ))}
       </div>
+      )}
     </div>
   );
 }
