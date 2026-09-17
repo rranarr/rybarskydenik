@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { toast } from "sonner";
 import { assignParticipantTeam, createTeam } from "@/lib/actions/events";
-import { Plus, X } from "lucide-react";
+import { Plus, X, Loader2 } from "lucide-react";
 
 interface Profile { display_name: string; avatar_url: string | null; }
 interface Team { id: string; name: string; }
@@ -18,12 +18,10 @@ interface Props {
   eventId: string;
   teams: Team[];
   participants: Participant[];
-  masterUserId: string;
 }
 
-export function TeamManager({ eventId, teams: initialTeams, participants, masterUserId }: Props) {
+export function TeamManager({ eventId, teams, participants }: Props) {
   const router = useRouter();
-  const [teams] = useState<Team[]>(initialTeams);
   const [newTeamName, setNewTeamName] = useState("");
   const [addingTeam, setAddingTeam] = useState(false);
   const [loading, setLoading] = useState<string | null>(null);
@@ -47,8 +45,8 @@ export function TeamManager({ eventId, teams: initialTeams, participants, master
     router.refresh();
   }
 
-  const unassigned = participants.filter((p) => p.user_id !== masterUserId && !p.team_id);
-  const assigned = participants.filter((p) => p.user_id !== masterUserId && p.team_id);
+  const unassigned = participants.filter((p) => !p.team_id);
+  const assigned = participants.filter((p) => !!p.team_id);
 
   return (
     <div className="space-y-5">
@@ -68,7 +66,9 @@ export function TeamManager({ eventId, teams: initialTeams, participants, master
             disabled={!newTeamName.trim() || addingTeam}
             className="h-10 px-4 shrink-0"
           >
-            <Plus className="h-4 w-4 mr-1" /> Přidat
+            {addingTeam
+              ? <Loader2 className="h-4 w-4 animate-spin" />
+              : <><Plus className="h-4 w-4 mr-1" /> Přidat</>}
           </Button>
         </div>
         {teams.length > 0 && (
@@ -108,7 +108,9 @@ export function TeamManager({ eventId, teams: initialTeams, participants, master
                       disabled={loading === p.user_id}
                       onClick={() => handleAssign(p.user_id, t.id)}
                     >
-                      {t.name}
+                      {loading === p.user_id
+                        ? <Loader2 className="h-3 w-3 animate-spin" />
+                        : t.name}
                     </Button>
                   ))}
                 </div>
@@ -146,7 +148,9 @@ export function TeamManager({ eventId, teams: initialTeams, participants, master
                   onClick={() => handleAssign(p.user_id, null)}
                   title="Odebrat z týmu"
                 >
-                  <X className="h-3.5 w-3.5" />
+                  {loading === p.user_id
+                    ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    : <X className="h-3.5 w-3.5" />}
                 </Button>
               </div>
             );
@@ -154,7 +158,7 @@ export function TeamManager({ eventId, teams: initialTeams, participants, master
         </div>
       )}
 
-      {participants.filter((p) => p.user_id !== masterUserId).length === 0 && (
+      {participants.length === 0 && (
         <p className="text-sm text-muted-foreground text-center py-4">
           Zatím se nikdo nepřipojil. Sdílej kód závodu z sekce výše.
         </p>

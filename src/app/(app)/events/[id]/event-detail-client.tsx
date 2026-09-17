@@ -14,11 +14,12 @@ import { format } from "date-fns";
 import { cs } from "date-fns/locale";
 import {
   Fish, Plus, Copy, MapPin, Calendar, Trophy, BarChart3, Info,
-  Pencil, Trash2, ArrowLeft
+  Pencil, Trash2, ArrowLeft, Loader2
 } from "lucide-react";
 import { LeaderboardTab } from "./leaderboard-tab";
 import { StatsTab } from "./stats-tab";
 import { TeamManager } from "./team-manager";
+import { selfSelectTeam } from "@/lib/actions/events";
 
 interface Profile { display_name: string; avatar_url: string | null; }
 interface Team { id: string; name: string; created_at: string; }
@@ -62,6 +63,64 @@ const statusConfig = {
   pending: { label: "Čeká na start", className: "bg-yellow-600 text-white" },
   ended: { label: "Skončil", className: "bg-muted text-muted-foreground" },
 };
+
+function SelfTeamSelect({
+  eventId, teams, currentTeamId,
+}: {
+  eventId: string;
+  teams: { id: string; name: string }[];
+  currentTeamId: string | null;
+}) {
+  const router = useRouter();
+  const [loading, setLoading] = useState<string | null>(null);
+
+  async function handleSelect(teamId: string | null) {
+    setLoading(teamId ?? "none");
+    const result = await selfSelectTeam(eventId, teamId);
+    setLoading(null);
+    if (result?.error) { toast.error(result.error); return; }
+    toast.success(teamId ? "Přiřazen do týmu!" : "Odebrán z týmu");
+    router.refresh();
+  }
+
+  return (
+    <div className="space-y-2">
+      <p className="text-sm font-semibold text-muted-foreground uppercase tracking-widest">Můj tým</p>
+      {currentTeamId ? (
+        <div className="flex items-center gap-2">
+          <Badge variant="secondary" className="text-base px-3 py-1">
+            {teams.find((t) => t.id === currentTeamId)?.name ?? "?"}
+          </Badge>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="text-muted-foreground"
+            disabled={!!loading}
+            onClick={() => handleSelect(null)}
+          >
+            {loading === "none" ? <Loader2 className="h-4 w-4 animate-spin" /> : "Odjít z týmu"}
+          </Button>
+        </div>
+      ) : (
+        <div className="flex flex-wrap gap-2">
+          {teams.map((t) => (
+            <Button
+              key={t.id}
+              variant="outline"
+              className="h-11"
+              disabled={!!loading}
+              onClick={() => handleSelect(t.id)}
+            >
+              {loading === t.id
+                ? <Loader2 className="h-4 w-4 animate-spin" />
+                : t.name}
+            </Button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 export function EventDetailClient({ event, userId, isParticipant, catches: initialCatches, participants, teams }: Props) {
   const router = useRouter();
@@ -311,6 +370,18 @@ export function EventDetailClient({ event, userId, isParticipant, catches: initi
               </div>
             </div>
 
+            {/* Self team selection — all participants, including the master */}
+            {isParticipant && event.mode === "teams" && teams.length > 0 && (
+              <>
+                <Separator />
+                <SelfTeamSelect
+                  eventId={event.id}
+                  teams={teams}
+                  currentTeamId={participants.find((p) => p.user_id === userId)?.team_id ?? null}
+                />
+              </>
+            )}
+
             {/* Team management — master only, teams mode */}
             {isMaster && event.mode === "teams" && (
               <>
@@ -321,7 +392,6 @@ export function EventDetailClient({ event, userId, isParticipant, catches: initi
                     eventId={event.id}
                     teams={teams}
                     participants={participants}
-                    masterUserId={event.master_user_id}
                   />
                 </div>
               </>

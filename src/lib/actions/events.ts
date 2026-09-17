@@ -102,6 +102,22 @@ export async function joinEventByCode(code: string) {
   return { eventId: event.id, mode: event.mode };
 }
 
+export async function selfSelectTeam(eventId: string, teamId: string | null) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) redirect("/auth");
+
+  const { error } = await supabase
+    .from("event_participants")
+    .update({ team_id: teamId })
+    .eq("event_id", eventId)
+    .eq("user_id", user.id);
+
+  if (error) return { error: error.message };
+  revalidatePath(`/events/${eventId}`);
+  return { success: true };
+}
+
 export async function assignParticipantTeam(eventId: string, participantUserId: string, teamId: string | null) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
