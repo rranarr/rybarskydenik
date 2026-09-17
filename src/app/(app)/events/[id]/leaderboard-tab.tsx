@@ -2,7 +2,7 @@
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Fish } from "lucide-react";
+import { Fish, Users, UserRound } from "lucide-react";
 
 interface Profile { display_name: string; avatar_url: string | null; }
 interface Team { id: string; name: string; }
@@ -35,11 +35,11 @@ interface TeamEntry {
   members: PlayerEntry[];
 }
 
-function buildLeaderboard(catches: Catch[], participants: Participant[]): PlayerEntry[] {
+function buildLeaderboard(catches: Catch[], participants: Participant[], teams: Team[]): PlayerEntry[] {
   const map = new Map<string, PlayerEntry>();
+  const teamNames = new Map(teams.map((team) => [team.id, team.name]));
 
   for (const p of participants) {
-    const teamEntry = p.team as Team | undefined;
     map.set(p.user_id, {
       user_id: p.user_id,
       display_name: p.profile?.display_name ?? "Neznámý",
@@ -48,7 +48,7 @@ function buildLeaderboard(catches: Catch[], participants: Participant[]): Player
       catch_count: 0,
       biggest_fish: 0,
       team_id: p.team_id,
-      team_name: teamEntry?.name ?? null,
+      team_name: p.team_id ? teamNames.get(p.team_id) ?? p.team?.name ?? null : null,
     });
   }
 
@@ -85,7 +85,7 @@ function buildTeamLeaderboard(playerEntries: PlayerEntry[], teams: Team[]): Team
 const rankEmoji = ["🥇", "🥈", "🥉"];
 
 export function LeaderboardTab({ catches, participants, teams, mode }: Props) {
-  const players = buildLeaderboard(catches, participants);
+  const players = buildLeaderboard(catches, participants, teams);
   const teamEntries = mode === "teams" ? buildTeamLeaderboard(players, teams) : [];
 
   if (players.length === 0) {
@@ -102,17 +102,22 @@ export function LeaderboardTab({ catches, participants, teams, mode }: Props) {
       {/* Team leaderboard */}
       {mode === "teams" && teamEntries.length > 0 && (
         <div className="space-y-2">
-          <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-widest">Týmy</h3>
+          <div className="flex items-center justify-between gap-2 pb-1">
+            <h3 className="flex items-center gap-2 text-sm font-semibold text-muted-foreground uppercase tracking-widest">
+              <Users className="h-4 w-4" /> Týmy
+            </h3>
+            <Badge variant="secondary">{teamEntries.length}</Badge>
+          </div>
           {teamEntries.map((team, i) => (
             <div key={team.team_id} className="rounded-xl border border-border bg-card px-4 py-3">
               <div className="flex items-center gap-3">
-                <span className="text-xl w-8 text-center">{rankEmoji[i] ?? `${i + 1}.`}</span>
-                <div className="flex-1">
-                  <p className="font-semibold">{team.team_name}</p>
+                <span className="text-xl w-8 shrink-0 text-center" aria-label={`${i + 1}. místo`}>{rankEmoji[i] ?? `${i + 1}.`}</span>
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold break-words">{team.team_name}</p>
                   <p className="text-xs text-muted-foreground">{team.members.length} členů · {team.catch_count} úlovků</p>
                 </div>
-                <div className="text-right">
-                  <p className="text-xl font-bold">{team.total_weight} kg</p>
+                <div className="text-right shrink-0">
+                  <p className="text-xl font-bold tabular-nums">{team.total_weight} kg</p>
                 </div>
               </div>
             </div>
@@ -120,38 +125,46 @@ export function LeaderboardTab({ catches, participants, teams, mode }: Props) {
         </div>
       )}
 
-      {/* Individual leaderboard — in teams mode only show unassigned */}
-      {(mode !== "teams" || players.some((p) => !p.team_id)) && (
+      {/* Individual leaderboard — all participants, regardless of team */}
       <div className="space-y-2">
+        <div className="flex items-center justify-between gap-2 pb-1">
+          <h3 className="flex items-center gap-2 text-sm font-semibold text-muted-foreground uppercase tracking-widest">
+            <UserRound className="h-4 w-4" /> Jednotlivci
+          </h3>
+          <Badge variant="secondary">{players.length}</Badge>
+        </div>
         {mode === "teams" && (
-          <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-widest">Bez týmu</h3>
+          <p className="text-xs text-muted-foreground pb-2">Celkové pořadí všech rybářů napříč týmy podle váhy úlovků.</p>
         )}
-        {(mode === "teams" ? players.filter((p) => !p.team_id) : players).map((p, i) => (
+        {players.map((p, i) => (
           <div key={p.user_id} className="rounded-xl border border-border bg-card px-4 py-3">
             <div className="flex items-center gap-3">
-              <span className="text-xl w-8 text-center">{rankEmoji[i] ?? `${i + 1}.`}</span>
-              <Avatar className="h-8 w-8">
+              <span className="text-xl w-8 shrink-0 text-center" aria-label={`${i + 1}. místo`}>{rankEmoji[i] ?? `${i + 1}.`}</span>
+              <Avatar className="hidden h-8 w-8 shrink-0 sm:flex">
                 <AvatarImage src={p.avatar_url ?? undefined} />
                 <AvatarFallback className="text-xs">
                   {p.display_name.slice(0, 2).toUpperCase()}
                 </AvatarFallback>
               </Avatar>
-              <div className="flex-1 min-w-0">
-                <p className="font-medium truncate">{p.display_name}</p>
-                <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                  <Fish className="h-3 w-3" /> {p.catch_count}
+              <div className="flex-1 min-w-0 space-y-1">
+                <p className="font-medium break-words">{p.display_name}</p>
+                {mode === "teams" && (
+                  <Badge variant={p.team_id ? "secondary" : "outline"} className="max-w-full whitespace-normal break-words text-xs">
+                    {p.team_name ?? (p.team_id ? "Neznámý tým" : "Bez týmu")}
+                  </Badge>
+                )}
+                <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
+                  <span className="inline-flex items-center gap-1"><Fish className="h-3 w-3" /> {p.catch_count} úlovků</span>
                   {p.biggest_fish > 0 && <span>· max {p.biggest_fish} kg</span>}
-                  {p.team_name && <Badge variant="outline" className="text-xs">{p.team_name}</Badge>}
                 </div>
               </div>
               <div className="text-right shrink-0">
-                <p className="text-xl font-bold">{p.total_weight > 0 ? `${p.total_weight} kg` : "—"}</p>
+                <p className="text-xl font-bold tabular-nums">{p.total_weight} kg</p>
               </div>
             </div>
           </div>
         ))}
       </div>
-      )}
     </div>
   );
 }

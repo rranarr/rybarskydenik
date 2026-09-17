@@ -7,6 +7,10 @@ import { cn } from "@/lib/utils";
 
 export function BottomNav() {
   const pathname = usePathname();
+  const eventId = pathname.match(/^\/events\/([^/]+)(?:\/|$)/)?.[1];
+  const newCatchHref = eventId && eventId !== "new"
+    ? `/events/${eventId}/catch/new`
+    : "/catch/new";
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
@@ -25,7 +29,9 @@ export function BottomNav() {
         {/* Center FAB */}
         <div className="flex flex-1 justify-center">
           <Link
-            href="/events/new"
+            href={newCatchHref}
+            aria-label="Zapsat nový úlovek"
+            title="Zapsat nový úlovek"
             className="flex items-center justify-center h-14 w-14 rounded-full bg-primary text-primary-foreground shadow-lg active:scale-95 transition-transform -translate-y-3"
           >
             <Plus className="h-7 w-7" />
