@@ -92,7 +92,7 @@ export function CatchForm({ eventId, eventName, userId, participants = [], exist
     }
 
     toast.success(existingCatch ? "Úlovek upraven!" : "Úlovek zapsán! 🎣");
-    router.push(`/events/${eventId}`);
+    router.push(existingCatch ? `/events/${eventId}` : `/events/${eventId}?tab=leaderboard`);
     router.refresh();
   }
 

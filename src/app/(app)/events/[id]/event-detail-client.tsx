@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
@@ -124,6 +124,11 @@ function SelfTeamSelect({
 
 export function EventDetailClient({ event, userId, isParticipant, catches: initialCatches, participants, teams }: Props) {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const requestedTab = searchParams.get("tab");
+  const activeTab = requestedTab && ["leaderboard", "catches", "stats", "info"].includes(requestedTab)
+    ? requestedTab
+    : "leaderboard";
   const [catches, setCatches] = useState<Catch[]>(initialCatches);
   const status = getEventStatus(event.starts_at, event.ends_at);
   const isMaster = event.master_user_id === userId;
@@ -201,7 +206,11 @@ export function EventDetailClient({ event, userId, isParticipant, catches: initi
 
       {/* Tabs */}
       <div className="max-w-2xl mx-auto">
-        <Tabs defaultValue="leaderboard" className="w-full">
+        <Tabs
+          value={activeTab}
+          onValueChange={(tab) => router.replace(`/events/${event.id}?tab=${tab}`, { scroll: false })}
+          className="w-full"
+        >
           <TabsList className="w-full rounded-none border-b border-border bg-background h-12 p-0">
             <TabsTrigger value="leaderboard" className="flex-1 h-full rounded-none data-[state=active]:border-b-2 data-[state=active]:border-primary">
               <Trophy className="h-4 w-4 mr-1" /> Žebříček
