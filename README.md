@@ -2,6 +2,16 @@ This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-
 
 ## Getting Started
 
+### Supabase migrations
+
+Run the SQL files in `supabase/migrations` in filename order using the Supabase SQL Editor.
+For an existing database, run only migrations that have not been applied yet.
+
+`002_catches_for_event_participants.sql` enables participants to record catches for
+other registered participants in the same active event. Apply this migration before
+using the angler selector in the new-catch form. Existing edit and delete permissions
+are unchanged.
+
 First, run the development server:
 
 ```bash

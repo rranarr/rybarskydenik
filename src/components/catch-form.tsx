@@ -29,6 +29,7 @@ interface Props {
   eventId: string;
   eventName: string;
   userId: string;
+  participants?: { user_id: string; display_name: string }[];
   existingCatch?: {
     id: string;
     species: string;
@@ -39,9 +40,10 @@ interface Props {
   };
 }
 
-export function CatchForm({ eventId, eventName, userId, existingCatch }: Props) {
+export function CatchForm({ eventId, eventName, userId, participants = [], existingCatch }: Props) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const [selectedUserId, setSelectedUserId] = useState(userId);
   const [selectedSpecies, setSelectedSpecies] = useState<string>(existingCatch?.species ?? "Kapr");
 
   const { register, handleSubmit, setValue, formState: { errors } } = useForm<FormValues>({
@@ -63,7 +65,7 @@ export function CatchForm({ eventId, eventName, userId, existingCatch }: Props) 
 
     const payload = {
       event_id: eventId,
-      user_id: userId,
+      user_id: existingCatch ? userId : selectedUserId,
       species: selectedSpecies,
       weight_kg: parseFloat(values.weight_kg),
       length_cm: values.length_cm ? parseFloat(values.length_cm) : null,
@@ -108,6 +110,26 @@ export function CatchForm({ eventId, eventName, userId, existingCatch }: Props) 
       </div>
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+        {!existingCatch && participants.length > 0 && (
+          <div className="space-y-2">
+            <Label htmlFor="catch_user_id">Rybář *</Label>
+            <select
+              id="catch_user_id"
+              value={selectedUserId}
+              onChange={(event) => setSelectedUserId(event.target.value)}
+              disabled={loading}
+              required
+              className="flex h-12 w-full min-w-0 rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {participants.map((participant) => (
+                <option key={participant.user_id} value={participant.user_id}>
+                  {participant.display_name}{participant.user_id === userId ? " (já)" : ""}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+
         {/* Species grid */}
         <div className="space-y-2">
           <Label>Druh ryby *</Label>
